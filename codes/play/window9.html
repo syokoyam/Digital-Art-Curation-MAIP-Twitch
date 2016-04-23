@@ -1,0 +1,341 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// EERIE LABYRINTH by REAS (www.reas.com)
+// Ported from Processing to Processing.js  
+  
+var windowWidth = opener.winVars[9][2];
+var windowHeight = opener.winVars[9][3];
+  
+//boolean hasOpenedNextWindow=false;
+
+boolean finished = false;
+
+int numParticles = 200;
+GenParticle[] p = new GenParticle[numParticles];
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int beginY = 220;
+int endY;
+int endX;
+
+boolean itsNotOver = true;
+
+Eye e;
+MazeRect[] mm = new MazeRect[23];
+
+color highlightColor = #006699;
+
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+  
+  e = new Eye(portalSpacer, beginY);
+  maze = loadImage("maze.gif");
+  path = loadImage("maze-path.gif");
+  
+  endX = width-portalSpacer;
+  endY = height-portalSpacer;
+  
+  for (int i = 0; i < p.length; i++) {
+    float velX = random(-1, 1);
+    float velY = -i;
+    p[i] = new GenParticle(width / 2, height / 2, velX, velY,
+                           5.0, width / 2, height / 2);
+  }
+  
+  mm[0] = new MazeRect(0, 0, width, 1); // Top edge
+  mm[1] = new MazeRect(width-1, 0, 1, height); // Right edge
+  mm[2] = new MazeRect(0, 0, 1, height); // Left edge
+  mm[3] = new MazeRect(0, height-1, width, 1); // Bottom edge
+  mm[4] = new MazeRect(0, 0, 36, 26);
+  mm[5] = new MazeRect(85, 0, 16, 26);
+  mm[6] = new MazeRect(21, 51, 35, 25);
+  mm[7] = new MazeRect(76, 51, 25, 50);
+  mm[8] = new MazeRect(21, 75, 5, 71);
+  mm[9] = new MazeRect(26, 141, 50, 5);
+  mm[10] = new MazeRect(76, 126, 5, 70);
+  mm[11] = new MazeRect(21, 176, 5, 25);
+  mm[12] = new MazeRect(26, 196, 55, 5);
+  mm[13] = new MazeRect(51, 201, 30, 80);
+  mm[14] = new MazeRect(1, 251, 50, 5);
+  mm[15] = new MazeRect(66, 306, 35, 5);
+  mm[16] = new MazeRect(1, 311, 25, 50);
+  mm[17] = new MazeRect(66, 361, 15, 70);
+  mm[18] = new MazeRect(46, 391, 20, 40);
+  mm[19] = new MazeRect(81, 426, 20, 5);
+  mm[20] = new MazeRect(21, 391, 5, 120);
+  mm[21] = new MazeRect(26, 496, 75, 5);
+  mm[22] = new MazeRect(1, 541, 25, 15);
+}
+
+void draw() 
+{
+  if (!finished) {
+
+    background(0);
+
+    e.drawLight();
+    for (int i = 0; i < mm.length; i++) {
+      mm[i].display();
+    }
+
+    if (itsNotOver) {
+      e.update();
+      e.display();
+    }
+
+    // Portal properties
+    noFill();
+    stroke(255);
+    strokeWeight(2);
+    // Starting portal
+    ellipse(portalSpacer, beginY, portalSize, portalSize);
+    // EndPortal
+    stroke(255, 204, 0);
+    ellipse(endX, endY, portalSize, portalSize);
+    strokeWeight(1);
+    stroke(255);
+    line(0, beginY, 8, beginY);
+
+  } 
+  else {
+
+    background(0, 102, 153);
+    stroke(255);
+    line(width/2, height/2, width/2, height);
+    for (int i = 0; i < p.length; i++) {
+      p[i].update();
+      p[i].regenerate();
+      p[i].display();
+    }
+
+  }
+}
+
+void mousePressed() {
+  e.press(); 
+
+  if (e.goal == true) {
+    itsNotOver = false; 
+    finished = true;
+	opener.totallyFinished = true;
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+  }
+}
+
+void mouseReleased() 
+{
+  e.release();
+  
+  //if(!hasOpenedNextWindow)
+  //{
+  //  openNextWindow();
+  //  hasOpenedNextWindow=true;	
+  //}
+}
+ 
+ 
+
+class Eye {
+
+  float x, y;
+  float px, py;
+  float diameter = 10;
+  float radius = diameter/2;
+
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0; 
+
+  float angle; 
+  float angleSpeed;
+  float speed;
+  boolean moving = true;
+  float easing = 0.2;
+
+  float lightSize = 100;
+
+  boolean goal = false;
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin;
+    py = y;
+    px = x;
+    angle = 0;
+    speed = 1.0;
+    diameter = 10;
+    radius = diameter/2;
+  }
+
+  void press() {
+    angle += HALF_PI;
+  }
+
+  void release() {
+
+  }
+
+  void drawLight() {
+    noStroke();
+    fill(0, 102, 153, 51);
+    for (int i = 10; i < lightSize; i += 10) {
+      ellipse(x, y, i, i);
+    }    
+  }
+
+  void update() {
+    
+    breathAngle += breathRate;
+    
+    if (goal) {
+      
+      float targetX = endX;
+      float targetY = endY;
+      //float targetAngle = 0;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+      
+    } 
+    else if (moving) {
+
+      px = x;
+      py = y;
+
+      x += cos(angle) * speed;
+      y += sin(angle) * speed;
+      
+      // Check for the goal!
+      if (dist(x, y, endX, endY) < radius) {
+        //overGoal = true;
+        goal = true;
+        breathRate = 1.5;
+        moving = false;
+      } 
+
+    } 
+
+    // KEEP THE EYE IN THE MAZE
+    for (int i = 0; i < mm.length; i++) {
+       if (x > mm[i].x && x < mm[i].x + mm[i].w && y > mm[i].y && y < mm[i].y + mm[i].h) {
+         x = px;
+         y = py; 
+       }
+    } 
+    
+  }
+
+  void display() {
+    pushMatrix();
+    translate(x, y);
+
+    scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+
+    noStroke();
+    fill(255);
+
+    ellipse(0, 0, diameter, diameter);
+    rotate(angle);
+    fill(0, 102, 153);
+    if (goal) {
+      ellipse(0, 0, radius, radius);
+    } else {
+      ellipse(2, 0, radius, radius);
+    }
+    popMatrix();
+  }
+
+
+}
+
+
+class GenParticle extends Particle {
+  float originX, originY;
+
+  GenParticle(int xIn, int yIn, float vxIn, float vyIn, float r, float ox, float oy) {
+    super(xIn, yIn, vxIn, vyIn, r);
+    originX = ox;
+    originY = oy;
+  }
+
+  void regenerate() {
+    if ((x > width + radius) || (x < -radius) ||
+        (y > height + radius) || (y < -radius)) {
+      x = originX;
+      y = originY;
+      vx = random(-1.0, 1.0);
+      vy = random(-8.0, -2.0);
+    }
+  }
+}
+
+class Particle {
+  float x, y; // The x- and y-coordinates
+  float vx, vy; // The x- and y-velocities
+  float radius; // Particle radius
+  float gravity = 0.1;
+
+  Particle(int xpos, int ypos, float velx, float vely, float r) {
+    x = xpos;
+    y = ypos;
+    vx = velx;
+    vy = vely;
+    radius = r;
+  }
+
+  void update() {
+    vy = vy + gravity;
+    y += vy;
+    x += vx;
+  }
+
+  void display() {
+    stroke(255);
+    point(x, y);
+  }
+}
+
+
+class MazeRect {
+ 
+ int x, y, w, h;
+  
+ MazeRect(int xin, int yin, int win, int hin) {
+   x = xin;
+   y = yin;
+   w = win;
+   h = hin;
+ }
+ 
+ void display(){
+   fill(0);
+   noStroke();
+   rect(x, y, w, h); 
+ }
+  
+}
+
+
+  </SCRIPT> 
+  <canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>

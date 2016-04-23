@@ -1,0 +1,347 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// SLIPPERY STREAM by REAS (www.reas.com)
+// Ported from Processing to Processing.js 
+  
+var windowWidth = opener.winVars[7][2];
+var windowHeight = opener.winVars[7][3];
+  
+boolean hasOpenedNextWindow=false;
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int beginY = 116;
+int endY = 320;
+int endX;
+
+boolean itsNotOver = true;
+
+Eye e;
+
+int numElements = 16;
+E1[] elements = new E1[numElements];
+
+color highlightColor = #99CC33;
+
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+
+  for (int i = 0; i < numElements; i++) {
+    float temprand = random(TWO_PI);
+    float hoff = cos(temprand) * height/5;
+    float voff = sin(temprand) * height/5;    
+    elements[i] = new E1(random(width), random(height), 20, i, elements);
+  }
+
+  e = new Eye(portalSpacer, beginY, elements); 
+  endX = width - portalSpacer;
+}
+
+void draw() 
+{
+  background(0);
+
+  for (int i=0; i<numElements; i++) { 
+   if (!mousePressed) { 
+     elements[i].update();  
+   }
+   elements[i].display();  
+  }
+
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(portalSpacer, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(width-portalSpacer, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, beginY, 8, beginY);
+  line(width, endY, width-8, endY);
+
+
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }
+}
+
+void mouseReleased() 
+{
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true;	
+    //}
+  }
+  
+}
+
+void openNextWindow()
+{
+  opener.popUp(8);
+}
+
+
+class E1 {
+  float x, newx;
+  float y, newy;
+  int id;
+  float movangle;
+  E1[] others;
+  float inc;
+  float angle;
+  float dotSize;
+  float r, cellwidth;
+  boolean hasOverlap;
+  boolean over;
+  float gray;
+  int direction;
+
+  E1(float xin, float yin, float rin, int num, E1[] elements)
+  {
+    x = xin; 
+    newx = x;
+    y = yin;
+    newy = y;
+    setRadius(rin);
+    id = num;
+    others = elements;
+    movangle = others.length / float(id) * TWO_PI;
+    
+    // Setting up defaults
+    inc = 1.0;
+    direction = -1;
+    angle = random(0, TWO_PI);
+    dotSize = 6.0;
+  }
+
+  float getCenterX() {
+    return x;
+  }
+
+  float getCenterY() {
+    return y;
+  }
+
+  void setRadius(float rin) {
+    r = rin;
+    cellwidth = r*2;
+  }
+
+  void move(float a, float r) {
+    newx = newx + cos(a) * r;
+    newy = newy + sin(a) * r;
+    hasOverlap = true;
+  }
+
+
+  void update() 
+  {
+    
+    // Increase the angle when touching another circle
+    // Increment position with numbers between -1 and 1
+    // Modulate the speed based on size of circle
+    newx += cos(angle); // * r;
+    newy += sin(angle); // * r;
+
+    // Constrain to screen
+    if(newx < r) { 
+      newx = r; 
+    }
+    if(newx > width-r) { 
+      newx = width-r; 
+    }
+    if(newy < r) { 
+      newy = r; 
+    }
+    if(newy > height-r) { 
+      newy = height-r; 
+    }
+
+    // Interpolate
+    float tempx = newx - x;
+    if(abs(tempx) > 0.1) {
+      x += tempx/40.0;
+    }
+    float tempy = newy - y;
+    if(abs(tempy) > 0.1) {
+      y += tempy/40.0;
+    }
+    
+    for(int i = id+1; i < numElements; i++) {
+        float dx = others[i].getCenterX() - getCenterX();
+        float dy = others[i].getCenterY() - getCenterY();
+        float rerr = others[i].cellwidth/2 + cellwidth/2 + 1.0;
+        float rr = others[i].cellwidth/2 + cellwidth/2;
+        float diff = dx*dx + dy*dy;
+
+        // If overlap move away from the other
+        if(diff < (rr*rr)) {
+          float rA = atan2( dy, dx );
+          others[i].move( rA, inc*4 );
+          move( rA + PI, inc*4 );
+        } 
+        else {
+          hasOverlap = false;
+        }
+        if(diff < rerr * rerr) {
+          over = true;
+          others[i].over = true;
+        }
+
+    }
+
+    // Turn if touching another
+    if(over == true) 
+    { 
+      angle += 0.10 * direction; 
+    }
+    angle += 0.01 * direction; // Always turn a bit
+  
+    over = false;
+  
+  }
+
+  void display() {
+    if (mousePressed && !e.goal) {
+      stroke(102);
+    } else {
+      stroke(highlightColor);
+    }
+    noFill();
+    ellipse(x, y, r*2, r*2);
+    float ca = cos(angle);
+    float sa = sin(angle);
+    line(x + ca*r/2, y + sa*r/2, x + ca*r, y + sa*r);
+  }
+
+}
+
+
+class Eye {
+
+  float x, y;
+  float diameter = 10;
+  float radius = diameter/2;
+  float angle, targetAngle;
+  float direction;
+
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+
+  float easing = 0.2;
+
+  boolean over = false;
+  boolean rotating = true;
+  E1[] others;
+
+  boolean goal = false;
+
+
+  Eye(float xin, float yin, E1[] othersIn) {
+    x = xin;
+    y = yin; 
+    others = othersIn;
+  }
+
+  void update() {
+    
+    breathAngle += breathRate;
+
+    if (goal) {
+
+      float targetX = endX;
+      float targetY = endY;
+      float targetAngle = 0;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+      float da = targetAngle - angle;
+      if (abs(da) > 0.01) {
+        angle += da * easing;
+      } 
+      
+    } 
+    else {
+
+      x += cos(angle);
+      y += sin(angle);
+
+      x = constrain(x, radius, width-radius);
+      y = constrain(y, radius, height-radius);
+
+      float dang = direction - angle;
+      if (abs(dang) > 0.001) {
+        angle += dang * 0.3; //easing;
+      }
+
+      // Check for the goal!
+      if (dist(x, y, endX, endY) < radius) {
+        goal = true;
+        breathRate = 1.5;
+      } 
+
+      // Check collision if mouse is not pressed
+      if (!mousePressed) {
+        for (int i = 0; i < numElements; i++) {
+          float d = dist(x, y, others[i].x, others[i].y); 
+          if (d < radius + others[i].r) {
+            direction = others[i].angle; // % TWO_PI; 
+          }
+        }
+      }
+    }
+  }
+
+  void display() {
+
+    pushMatrix();
+    translate(x, y);
+
+    scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+    noStroke();
+    fill(255);
+    ellipse(0, 0, diameter, diameter);
+    if (mousePressed) {
+      fill(255, 204, 0);
+    } 
+    else {
+      fill(0, 102, 153);
+    }
+    rotate(angle);
+    ellipse(2, 0, radius, radius);
+    popMatrix();
+
+  }
+
+}
+
+
+  </SCRIPT> 
+  <canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas> 
+</BODY></HTML>

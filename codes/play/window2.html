@@ -1,0 +1,423 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script> -->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// PERILOUS BELT by REAS (www.reas.com)
+// Ported from Processing to Processing.js
+  
+var windowWidth = opener.winVars[2][2];
+var windowHeight = opener.winVars[2][3];
+
+boolean hasOpenedNextWindow=false;
+  
+int portalSpacer = 16;
+int portalSize = 14;
+int beginY = 112;
+int endY = 320;
+
+boolean itsNotOver = true;
+
+Eye e;
+Mech m;
+
+color highlightColor = #FF6600; //#FF3300;
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+  e = new Eye(portalSpacer, beginY);
+  m = new Mech(width/2, height/2);
+}
+
+void draw() 
+{
+  background(0);
+
+  m.update();
+  m.display();
+
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(portalSpacer, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(width-portalSpacer, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, beginY, 8, beginY);
+  line(width, endY, width-8, endY);
+
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }
+}
+
+void mousePressed() 
+{
+  e.press();  
+}
+
+void mouseReleased() 
+{
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true; 
+    //}
+  }
+}
+
+void openNextWindow()
+{
+  opener.popUp(3);
+}
+
+class Blade {
+
+  float x, y, xx, xy;
+  float direction = 1.0;
+  float speed = 0.7;
+  float angle;
+  float angleSpeed = 0.05;
+  float radius;
+  float diameter;
+
+  Blade (float xin, float r, float d, float yin, float ain) {
+    x = xin;
+    y = yin;
+    radius = r;
+    diameter = d;
+    angle = ain;
+  } 
+
+  void update() {
+    y += speed * direction;
+    if (y < diameter || y > height - diameter) {
+      direction *= -1; 
+    }
+    angle += angleSpeed; 
+  }
+
+  void display() {
+    // Blades
+    stroke(255, 204, 0);
+    noFill();
+    xx = x + (cos(angle) * (radius + 10));
+    xy = x + (cos(angle+PI) * (radius + 10));
+    if (frameCount % 2 == 0) {
+      line(x, y-1, xx, y-1); 
+      line(x, y+1, xy, y+1); 
+    } else {
+      line(x, y+1, xx, y+1); 
+      line(x, y-1, xy, y-1);
+    }
+  }
+}
+
+class Detritus {
+
+  float angle;
+  float diameter;
+  float radius;
+  float x;
+  float y;
+  float fx, fy;
+  
+  Detritus(float ain, float rin, float xin, float yin) {
+    angle = ain;
+    radius = rin;
+    x = xin;
+    y = yin;
+    diameter = radius + radius;
+  }
+
+  void display() {
+    // Moving elements
+    if (angle < TWO_PI) {
+      angle += 0.02;
+      fx = x + cos(angle) * (radius + 11);
+      fy = diameter + sin(angle) * (radius + 11);
+      //line(fx, fy, x + cos(angle) * (radius + 10), diameter + sin(angle) * (radius + 10)); 
+      line(x + cos(angle) * radius, diameter + sin(angle) * radius, fx, fy);
+    } 
+    else if ( y < height-diameter && angle < TWO_PI + QUARTER_PI) {
+      y += 0.5;
+      fx = x + radius + 10;
+      fy = y;
+      line(x + radius, y, fx, fy);
+    } 
+    else if (angle < TWO_PI + PI) {
+      angle += 0.02;
+      fx = x + cos(angle) * (radius + 10);
+      fy = height-diameter + sin(angle) * (radius + 10);
+      line(x + cos(angle) * radius, height-diameter + sin(angle) * radius, fx, fy);
+    } 
+    else {
+      y -= 0.5;
+      fx =  x - radius - 10;
+      fy = y;
+      line(x - radius, y, fx, fy);
+      if (y < diameter) {
+        angle = PI; 
+      }
+    } 
+
+  }
+}
+
+
+class Eye {
+
+  float x, y;
+  float angle; 
+  float diameter = 10;
+  float radius = diameter/2;
+
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  float easing = 0.2;
+
+  float jumpAngle;
+  boolean jumping = false;
+  
+  float alpha = 255;
+
+  int attachedTo = 0;
+  float offset = 0;
+
+  boolean moving = false;
+  boolean goal = false;
+  boolean explode = false;
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin;
+    angle = 0;
+  }
+
+  void press() {
+    offset = -10;
+    if (jumping == false) {
+      jumping = true;
+      jumpAngle = 0;
+    }
+  }
+
+  void update() {
+
+    breathAngle += breathRate;
+
+    if (moving == true) {
+
+      if (jumping == true) {
+        jumpAngle += 0.1;
+        offset = sin(jumpAngle) * -15.0;
+        if (jumpAngle > PI) {
+          offset = 0;
+          jumping = false;
+        }  
+      }
+
+      x = m.dets[attachedTo].fx;
+      y = m.dets[attachedTo].fy;
+      angle = m.dets[attachedTo].angle + PI;
+      x = x + cos(angle) * offset;
+      y = y + sin(angle) * offset;
+
+      // Check to see if it's hit a blade
+      for (int i = 0; i < m.numBlades; i++) {
+        if ((dist(x, y, m.blades[i].xx, m.blades[i].y-1) < radius)
+          || (dist(x, y, m.blades[i].xy, m.blades[i].y+1) < radius)) {
+          explode = true; 
+        }
+
+      }
+
+      // Check to see if the goal has been reached
+      if ((dist(x, y, width-portalSpacer, endY) < 2) && (explode == false)) {
+        goal = true;
+        moving = false;
+        breathRate = 1.5; 
+        x = width-portalSpacer;
+        y = endY;
+        //breathScale = 2.0;
+      }
+
+      if (explode) {
+        alpha -= 5;
+        if (alpha < 5) {
+          x = portalSpacer;
+          y = beginY;
+          //targetY = height-portalSize;
+          explode = false;
+          moving = false;
+          //go = false; 
+          alpha = 255;
+        } 
+      }
+
+    } 
+    else if (goal == true) {
+
+
+
+    } 
+    else {
+
+      for (int i = 0; i < m.numDets; i++) {
+        if (dist(x, y, m.dets[i].fx, m.dets[i].fy) < 2) {
+          moving = true;
+          attachedTo = i; 
+        }
+      } 
+
+
+    }
+  }
+
+  void display() {
+    if (explode) {
+
+      translate(x, y);
+      float r = map(alpha, 255, 0, HALF_PI, TWO_PI*4);
+      float s = map(alpha, 255, 0, 1.0, 5.0);
+      scale(s);
+      rotate(r);
+      noStroke();
+      fill(255, alpha);
+      ellipse(0, 0, diameter, diameter);
+      fill(0, 102, 153, alpha);
+      ellipse(0, 2, radius, radius);
+
+    } 
+    else {
+
+      translate(x, y);
+      scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+      noStroke();
+      fill(255);
+      ellipse(0, 0, diameter, diameter);
+      rotate(angle);
+      fill(0, 102, 153);
+      ellipse(0, 0, radius, radius);
+
+    }
+  }
+
+}
+
+
+class Mech {
+
+  int x, y;
+  float radius, diameter;
+  int numBlades = 4;
+  Blade[] blades;
+  int numDets = 18;
+  Detritus[] dets;
+  float my;
+
+  float angle = PI;
+
+  Mech (int xin, int yin) {
+    x = xin;
+    y = yin;
+    radius = 24;
+    diameter = radius + radius;
+
+    my = diameter;
+
+    dets = new Detritus[numDets];
+    int d = 17;
+    for (int i = 0; i < numDets; i++) {
+      // Angle, Radius, X, Y
+      if (i == 0) {
+        dets[i] = new Detritus(PI + HALF_PI, radius, x, diameter);
+      } 
+      else if (i == 1) {
+        dets[i] = new Detritus(TWO_PI + HALF_PI, radius, x, height-diameter);
+
+      } 
+      else if (i < numDets/2 + 1) {
+        int oi = i - 2 + 1;
+        //println(oi);
+        if (i % 2 == 0) {
+          dets[i] = new Detritus(TWO_PI, radius, x, height/2 + oi * d);
+        } 
+        else {
+          dets[i] = new Detritus(TWO_PI, radius, x, height/2 + oi * -d);
+        }
+      } 
+      else {
+        int oi = i - numDets/2 - 1 + 1;
+                      
+        if (i%2 == 0) {
+          dets[i] = new Detritus(TWO_PI + PI, radius, x, height/2 + oi * d);
+        } 
+        else {
+          dets[i] = new Detritus(TWO_PI + PI, radius, x, height/2 + oi * -d);
+        }
+      }
+    }
+
+    blades = new Blade[numBlades];
+    for (int i = 0; i < numBlades; i++) {
+      blades[i] = new Blade(x, radius, diameter, height * (0.2 * (i+1)), i * QUARTER_PI);
+    }
+  } 
+
+  void update() {
+    for (int i = 0; i < numBlades; i++) {
+      blades[i].update(); 
+    }
+  }
+
+  void display() {
+
+    stroke(102);
+    noFill();    
+    line(x-radius, diameter, x-radius, height-diameter); 
+    line(x+radius, diameter, x+radius, height-diameter); 
+    
+    noStroke();
+    strokeWeight(4);
+    stroke(highlightColor);
+    ellipse(x, diameter, diameter-3, diameter-3);
+    ellipse(x, height-diameter, diameter-3, diameter-3);
+    strokeWeight(1);
+    
+    stroke(255);
+    line(x, diameter, x, height-diameter); 
+
+    stroke(204);
+    for (int i = 0; i < numDets; i++) {
+      dets[i].display();
+    }
+    
+    for (int i = 0; i < numBlades; i++) {
+      blades[i].display();
+    }
+
+  }
+
+
+}
+ 
+  </SCRIPT> 
+<canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>

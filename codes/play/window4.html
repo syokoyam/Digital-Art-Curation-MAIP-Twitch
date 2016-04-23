@@ -1,0 +1,363 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// BOOMING CANNON by REAS (www.reas.com)
+// Ported from Processing to Processing.js
+  
+var windowWidth = opener.winVars[4][2];
+var windowHeight = opener.winVars[4][3];
+    
+boolean hasOpenedNextWindow=false;
+  
+  
+int portalSpacer = 16;
+int portalSize = 14;
+int beginY = 470;
+int endY = 116;
+int endX;
+
+boolean itsNotOver = true;
+boolean loading = true;
+boolean powering = false;
+boolean aiming = false;
+
+Eye e; 
+Cannon c;
+
+color highlightColor = #FF9700;
+
+
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth(); 
+  frameRate(30);
+
+  c = new Cannon(portalSpacer, height-100); 
+  loadCannon();
+  
+  endX = width-portalSpacer;
+}
+
+void loadCannon() {
+  e = new Eye(portalSpacer, beginY, 0.0, 0.0); 
+  loading = true;
+  c.magnitude = 0.0;
+  c.angle = HALF_PI;
+}
+
+void draw() 
+{
+  background(0);
+  fill(255); 
+
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(portalSpacer, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(endX, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, beginY, 8, beginY);
+  line(width, endY, width-8, endY);
+
+  // Target
+  noFill();
+  stroke(highlightColor);
+  for (int i = portalSize + 30; i < endY; i += 30) {
+    ellipse(width-portalSpacer, endY, i, i);
+  }
+
+
+  c.update();
+  c.display();
+
+  if (itsNotOver) {
+    e.update(); 
+    e.display(); 
+  }
+
+  if (e.x > width + 10 || e.x < -20 || e.y > height + 20) {
+    loadCannon(); 
+    e.go = false;
+  }
+}
+
+void mousePressed() {
+  c.press();  
+}
+
+void mouseReleased() 
+{
+  c.release();
+  
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    // hasOpenedNextWindow=true;  
+    //}
+  }
+}
+
+void openNextWindow()
+{
+  opener.popUp(5);
+}
+
+
+class Cannon {
+
+  float x, y;
+  float angle = HALF_PI;
+  float offset;
+  float magnitude;
+  boolean stop = false;
+  
+  int numParticles = 20;
+  Particle[] ps;
+
+  Cannon (float xin, float yin) {
+    x = xin;
+    y = yin;
+    ps = new Particle[numParticles];
+    resetParticles(0, 0);
+  } 
+  
+  void resetParticles(float xxx, float yyy) {
+    for (int i = 0; i < numParticles; i++) {
+      float vx = random(-1, 1);
+      float vy = random(-5, 0);
+      ps[i] = new Particle(xxx, yyy, vx, vy); 
+    }
+  }
+
+  void press() {
+    //e.go = true;
+    if (!loading && e.go == false) {
+      aiming = false;
+      powering = true;
+    }
+  }
+
+  void release() {
+    if (loading == false && e.goal == false && e.go == false) {
+      e.setValues(cos(PI+HALF_PI+offset) * magnitude, sin(PI+HALF_PI+offset) * magnitude);
+      e.go = true;
+      aiming = false;
+      powering = false;
+      stop = true;
+      resetParticles(e.x, e.y);
+    }
+  }
+
+  void update() {
+    
+    if (aiming == true) {
+      //println(frameCount);
+      angle += 0.02;
+      offset = map(cos(angle), 1, -1, -QUARTER_PI/2, QUARTER_PI/2);
+      e.x = x + cos(PI + HALF_PI + offset) * 40;
+      e.y = y + sin(PI + HALF_PI + offset) * 40;
+      
+    } else if (powering == true) {
+      
+      if (magnitude < 10) {
+        magnitude += 0.1;
+      }
+    
+    } else if (loading == true) {
+      float targetOffset = 0.0;
+      float doff = targetOffset - offset;
+      if (abs(doff) > 0.01) {
+        offset += doff * 0.1; 
+      }
+    } else {
+      for (int i = 0; i < numParticles; i++) {
+        ps[i].update();
+        ps[i].display();
+      } 
+    }
+  }
+
+  void display() {
+
+    pushMatrix();
+    
+    noStroke();
+    fill(highlightColor);
+    translate(x, y);
+    rotate(offset);
+    quad(-8, 0, -5, -40, 5, -40, 8, 0);
+    ellipse(0, 0, 16, 16);
+
+    // Magnitude marker    
+    noFill();
+    stroke(102);
+    line(0, 8, 0, 58);
+    //line(0, -700, 0, 0);  // DEBUG
+    for(int i = 18; i < 58; i+= 10) {
+      line(-2, i, 2, i);
+    }
+    
+    // Pullback mechanism
+    strokeWeight(2);
+    stroke(highlightColor);
+    line(0, 8, 0, 8 + magnitude * 5);
+    line(-2, 8 + magnitude * 5, 2, 8 + magnitude * 5);
+    
+    popMatrix();
+    strokeWeight(1);
+
+  }
+}
+
+
+
+class Eye { 
+
+  float x, y;    // The x- and y-coordinates 
+  int numP = 12;
+  float vx, vy;  // The x- and y-velocities 
+  float diameter = 10;
+  float radius = diameter / 2; 
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  float easing = 0.1;
+
+  float gravity = 0.1; 
+  float magnitude = 0.0;
+  float angle;
+
+  boolean go = false;
+  boolean goal = false;
+
+  Eye(int xpos, int ypos, float velx, float vely) { 
+    x = xpos; 
+    y = ypos; 
+    vx = velx; 
+    vy = vely;
+  }
+
+  void setValues(float vxin, float vyin) {
+    vx = vxin;
+    vy = vyin;
+  }
+
+  void update() {
+
+    breathAngle += breathRate;
+
+    if (go) {     
+
+      vy = vy + gravity; 
+      y += vy; 
+      x += vx; 
+
+      if (dist(x, y, endX, endY) < diameter) {
+        goal = true; 
+        go = false;
+        breathRate = 1.5;
+      }
+
+    } 
+    else if (goal) {
+
+      float targetX = width-portalSpacer;
+      float targetY = endY;
+      float targetAngle = PI;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+
+      angle = c.offset - HALF_PI;
+
+    } 
+    else if (loading) {
+      y += 1.0;
+      if (y >= c.y - 40) {
+        loading = false; 
+        aiming = true;
+      }
+    }
+  }
+
+  void display() { 
+
+    pushMatrix();
+    translate(x, y);
+    scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+    noStroke();
+    fill(255);
+    ellipse(0, 0, diameter, diameter);
+    fill(0, 102, 153);
+    if (loading) {
+      ellipse(0, -2, radius, radius);
+    } 
+    else if (aiming || powering) {
+      rotate(c.offset);
+      ellipse(0, -2, radius, radius);  
+    } 
+    else if (goal) {
+      //rotate(angle);
+      ellipse(0, 0, radius, radius);
+    } 
+    else {
+      rotate(atan2(vy, vx) + HALF_PI);
+      ellipse(0, -2, radius, radius);
+    }
+    popMatrix();
+  }
+}
+
+
+class Particle {
+  
+  float x, y; // The x- and y-coordinates
+  float vx, vy; // The x- and y-velocities
+  float radius; // Particle radius
+  float gravity = 0.1;
+
+  Particle(float xpos, float ypos, float velx, float vely) {
+    x = xpos;
+    y = ypos;
+    vx = velx;
+    vy = vely;
+  }
+
+  void update() {
+    vy = vy + gravity;
+    y += vy;
+    x += vx;
+  }
+
+  void display() {
+    //ellipse(x, y, radius*2, radius*2);
+    stroke(255);
+    point(x, y);
+  }
+  
+}
+
+
+  </SCRIPT> 
+<canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>

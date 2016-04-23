@@ -1,0 +1,359 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// SMUGGLING by REAS (www.reas.com)
+// Ported from Processing to Processing.js 
+  
+var windowWidth = opener.winVars[6][2];
+var windowHeight = opener.winVars[6][3];
+  
+boolean hasOpenedNextWindow=false;
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int beginY;
+int endX;
+int endY;
+
+boolean itsNotOver = true;
+
+Vehicle[] others;
+Eye e;
+
+color highlightColor = #CCCC1A;
+color midColor = #666666;
+
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+
+  others = new Vehicle[28];
+
+  int break1 = 3;
+  int break2 = 7;
+  int break3 = 11;
+  int break4 = 15;
+  int break5 = 18; 
+  int break6 = 21;
+  int break7 = 25;
+
+  for (int i = 0; i < others.length; i++) {
+    if (i < break1) {
+      others[i] = new Vehicle(i * 20, 294, -0.8, i); 
+    } 
+    else if (i < break2) {
+      int thisOne = i - break1;
+      others[i] = new Vehicle((i-break1) * 20, 256, 1.0, thisOne);  
+    } 
+    else if (i < break3) {
+      int thisOne = i - break2;
+      others[i] = new Vehicle((i-break2) * 20, 220, -1.4, thisOne);  
+    } 
+    else if (i < break4) {
+      int thisOne = i - break3;
+      others[i] = new Vehicle((i-break3) * 20, 182, 1.0, thisOne);
+    } 
+    else if (i < break5) {
+      int thisOne = i - break4;
+      others[i] = new Vehicle((i-break4) * 20, 164, 0.8, thisOne);
+    } 
+    else if (i < break6) {
+      int thisOne = i - break5;
+      others[i] = new Vehicle((i-break5) * 20, 108, -2.0, thisOne);
+    } 
+    else if (i < break7) {
+      int thisOne = i - break6;
+      others[i] = new Vehicle((i-break6) * 20, 72, 1.2, thisOne);
+    } 
+    else {
+      int thisOne = i - break7;
+      others[i] = new Vehicle((i-break7) * 20, 54, 1.7, thisOne);
+    }
+  }
+
+  beginY = height - portalSpacer;
+  endX = width - portalSpacer;
+  endY = portalSpacer;
+  
+  e = new Eye(beginX, beginY); 
+}
+
+void draw() 
+{
+  background(0);
+
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(beginX, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(endX, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, beginY, 8, beginY);
+  line(width, endY, width-8, endY);
+
+  // Road lines
+  stroke(midColor);
+  line(0, 89, width, 89);
+  line(0, 91, width, 91);
+  line(0, 126, width, 126);
+  line(0, 128, width, 128);
+  line(0, 145, width, 145);
+  line(0, 147, width, 147);
+  line(0, 200, width, 200);
+  line(0, 202, width, 202);
+  line(0, 237, width, 237);
+  line(0, 239, width, 239);
+  line(0, 274, width, 274);
+  line(0, 276, width, 276);
+
+  for (int i = 0; i < others.length; i++) {
+    others[i].update();
+    others[i].display();
+  }
+
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }
+}
+
+void mousePressed() {
+  e.press();	
+}
+
+void mouseReleased() 
+{
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true;	
+    //}
+  }
+}
+
+void openNextWindow()
+{
+  opener.popUp(7);
+}
+
+
+class Eye {
+
+  float x, y;
+  float diameter = 10;
+  float radius = diameter/2;
+
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  float easing = 0.2;
+
+  float alpha = 255; 
+
+  float nextY;  
+  float angle = 0;
+  float moveUnit = 18.526;
+  float speed = 0.5;
+
+  boolean go = false;
+  boolean explode = false;
+  boolean rebirth = false;
+
+  boolean goal = false;
+
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin; 
+    nextY = y;
+
+  }
+
+  void press() {
+    go = true;
+    if (nextY > portalSpacer*2) {
+      nextY -= moveUnit; 
+    }
+  }
+
+  void update() {
+
+    if (goal) {
+
+      float targetX = endX;
+      float targetY = endY;
+      float targetAngle = HALF_PI;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+      float da = targetAngle - angle;
+      if (abs(da) > 0.01) {
+        angle += da * easing;
+      } 
+
+    } 
+    else if (explode) {
+
+      alpha -= 5;
+      if (alpha < 5) {
+        x = portalSpacer;
+        y = beginY;
+        nextY = beginY;
+        explode = false;
+        go = false; 
+        alpha = 255;
+      }
+
+    } 
+    else if (go) {
+
+
+      float dy = nextY - y;
+      if (abs(dy) > 1) {
+        y += dy * easing;
+      }
+
+      x += speed;
+      if (x > width + 12) {
+        x = -12; 
+      }
+
+      // Check for goal
+      if (dist(x, y, endX, endY) < radius) {
+        goal = true;
+        breathRate = 1.5;
+      } 
+
+      // Check collision
+      explode = false;
+      for (int i = 0; i < others.length; i++) {
+
+        float otherX = others[i].x;
+        float otherY = others[i].y;
+        float otherRadius = others[i].unit/2;
+
+        if (dist(x, y, otherX, otherY) < radius + otherRadius) {
+          explode = true;
+        } 
+
+      }
+
+    }
+    
+    breathAngle += breathRate;
+  
+  }
+
+  void display() {
+    if (explode) {
+
+      translate(x, y);
+
+      float r = map(alpha, 255, 0, HALF_PI, TWO_PI*4);
+      float s = map(alpha, 255, 0, 1.0, 5.0);
+
+      scale(s);
+      rotate(r);
+
+      noStroke();
+      fill(255, alpha);
+      ellipse(0, 0, diameter, diameter);
+
+      fill(0, 102, 153, alpha);
+      ellipse(0, 2, radius, radius);
+
+
+    } 
+    else if (rebirth) {
+
+
+    } 
+    else {
+
+      translate(x, y);
+
+      scale(1.0 + (cos(breathAngle) + 1.0) / 8.0);
+
+      noStroke();
+      fill(255);
+      ellipse(0, 0, diameter, diameter);
+
+      rotate(angle);
+      fill(0, 102, 153);
+      ellipse(0, -2, radius, radius);
+    }
+  }
+
+}
+
+
+class Vehicle {
+
+  float x, y;
+  float unit;
+  float speed;
+
+  Vehicle(float xin, float yin, float speedin, int toi) {
+    x = xin;
+    y = yin;
+    speed = speedin;
+    if (speed < 0) {
+      unit = 6 + toi*2;
+    } else {
+      unit = 14 - toi*2;
+    }
+  }
+
+  void update() {
+
+    // Move from left to right
+    x += speed;
+    if (speed > 0.0) {
+      if (x > width + 12) {
+        x = -12; 
+      }
+    } 
+    else {
+      if (x < -12) {
+        x = width + 12; 
+      }
+    }
+    
+
+  } 
+
+  void display() {
+    noStroke();
+    fill(highlightColor);
+    ellipse(x, y, unit, unit);
+  }
+
+}
+
+
+  </SCRIPT> 
+<canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>

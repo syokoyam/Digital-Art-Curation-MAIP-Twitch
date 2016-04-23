@@ -1,0 +1,237 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// FLOW by REAS (www.reas.com)
+// Ported from Processing to Processing.js
+
+var windowWidth = opener.winVars[1][2];
+var windowHeight = opener.winVars[1][3];
+  
+boolean hasOpenedNextWindow=false;
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int beginY = portalSpacer;
+int endX;
+int endY;
+
+boolean itsNotOver = true;
+
+int numTiles = 204; //221;
+Tile tiles[];
+Eye e;
+
+color highLight = #CC0000;
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+  
+  endX = width - portalSpacer;
+  endY = height - portalSpacer;
+
+  e = new Eye(portalSpacer, portalSpacer);
+
+  tiles = new Tile[numTiles];
+  float x = 3;
+  float y = -8;
+  for (int i = 0; i < numTiles; i++) {
+    int unit = 8;
+    // X, Y, angle, angle, length  
+    tiles[i] = new Tile(x, y, i * -0.011, 0, unit);
+    x += unit;
+    if (x > width-10) {
+      x = 3; 
+      y += unit; 
+    }
+  }
+}
+
+void draw() 
+{
+  background(0);
+
+  for (int i = 0; i < numTiles; i++) {
+    tiles[i].display();
+  }
+  
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(beginX, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(endX, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(beginY, 0, beginY, 8);
+  line(width, endY, width-8, endY);
+  
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }
+}
+
+void mouseReleased() 
+{
+  for (int i = 0; i < tiles.length; i++) {
+    tiles[i].targetAngle += HALF_PI;  
+  }
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true;	
+    //}
+  }
+}
+
+void openNextWindow()
+{
+  opener.popUp(2);
+}
+
+class Eye {
+
+  float x, y;
+  float speed = 0.5;
+  float angle;
+  float diameter = 10;
+  float radius = diameter / 2;
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  float easing = 0.1;
+
+  boolean goal = false;
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin; 
+  }
+
+  void update() {
+
+    breathAngle += breathRate;
+
+    if (goal == false) {
+
+      x += cos(angle) * 0.4;
+      y += sin(angle) * 0.4;
+      x = constrain(x, radius, width-radius);
+      y = constrain(y, radius, height-radius);
+
+      if (dist(x, y, width-portalSpacer, height-portalSpacer) < radius) {
+        goal = true;
+        breathRate = 1.5; 
+        //breathScale = 2.0;
+      }
+
+      // Check collision
+      for (int i = 0; i < numTiles; i++) {
+
+        float x1 = tiles[i].x;
+        float y1 = tiles[i].y;
+        float unit1 = tiles[i].unit;
+
+        if (x > x1 && x < x1 + unit1 && y > y1) {
+          angle = tiles[i].angle;
+          //println("match");
+        }
+      }
+
+    } 
+    else {
+      float targetX = width-portalSpacer;
+      float targetY = height-portalSpacer;
+      float targetAngle = 0;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+      float da = targetAngle - angle;
+      if (abs(da) > 0.01) {
+        angle += da * easing;
+      } 
+    }
+
+  }
+
+  void display() {
+    pushMatrix();
+    translate(x, y);
+    scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+    noStroke();
+    fill(255);
+    ellipse(0, 0, diameter, diameter);
+    
+    rotate(angle - HALF_PI);
+    if (!goal) {
+      fill(0, 102, 153);
+      ellipse(0, 2, radius, radius);
+    } else {
+      fill(0, 102, 153);
+      ellipse(0, 0, radius, radius);
+    }
+    popMatrix();
+  }
+
+}
+
+
+class Tile {
+
+  float x, y;
+  float angle1, angle2;
+  float angle, targetAngle;
+  float easing = 0.1;
+  float unit, high;
+
+  Tile (float xin, float yin, float a1in, float a2in, float uin) {
+    x = xin;
+    y = yin;
+    unit = uin;
+    high = unit/6;
+    angle1 = a1in;
+    angle2 = a2in;
+    targetAngle = angle = a1in;
+  }
+
+  void display() {
+
+    float da = targetAngle - angle;
+    angle += da * easing; 
+
+    pushMatrix();
+    translate(x + unit/2, y + unit/2);
+    rotate(angle);
+    stroke(highLight);
+    line(-unit/2, unit/2, unit/2, unit/2);
+    popMatrix();
+
+  }
+
+}
+
+
+  </SCRIPT> 
+<canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>

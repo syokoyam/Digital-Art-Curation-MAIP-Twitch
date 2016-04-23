@@ -1,0 +1,355 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// ELECTRIC PYRAMID by REAS (www.reas.com)
+// Ported from Processing to Processing.js 
+  
+var windowWidth = opener.winVars[5][2];
+var windowHeight = opener.winVars[5][3];
+  
+boolean hasOpenedNextWindow=false;
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int beginY = portalSpacer;
+int endX;
+int endY;
+
+boolean itsNotOver = true;
+
+Eye e;
+Pyramid[] ps;
+
+color highlightColor = #FFCC00;
+color altHighlightColor = #CCCC1A;
+
+int LEFTY = 0;
+int RIGHTY = 1;
+
+boolean started = true;
+
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+
+  ps = new Pyramid[8];
+  ps[0] = new Pyramid(40,  24, LEFTY, 0);
+  ps[1] = new Pyramid(20, 100, LEFTY, 1);
+  ps[2] = new Pyramid(60, 180, LEFTY, 2);
+  ps[3] = new Pyramid(40, 280, LEFTY, -1);
+  ps[4] = new Pyramid(30, -30, RIGHTY, 2);
+  ps[5] = new Pyramid(40,  60, RIGHTY, 0);
+  ps[6] = new Pyramid(30, 140, RIGHTY, -1);
+  ps[7] = new Pyramid(40, 240, RIGHTY, 2);
+
+  endX = width - portalSpacer;
+  endY = height - portalSpacer;
+
+  e = new Eye(beginX, beginY); 
+}
+
+void draw() 
+{
+  background(0);
+
+  electricFence();
+
+  for (int i = 0; i < ps.length; i++) {
+    ps[i].update();
+    ps[i].display();
+  }
+
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }  
+
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(beginX, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(endX, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, beginY, 8, beginY);
+  line(width, endY, width-8, endY);
+}
+
+void electricFence() {
+
+  stroke(altHighlightColor);
+  noFill();
+  beginShape();
+  for (int y = 60; y < height; y+=5) {
+    vertex(5 + random(-2, 2), y); 
+  }
+  for (int x = 10; x < width; x+=5) {
+    vertex(x, height-5 + random(-2, 2)); 
+  }
+  for (int y = height-5; y > 10; y-=5) {
+    vertex(width-5 + random(-2, 2), y); 
+  }
+  endShape();
+
+}
+
+void mouseReleased() 
+{
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true;	
+    //}
+  }
+  
+}
+
+void openNextWindow()
+{
+  opener.popUp(6);
+}
+
+
+class Eye {
+
+  float x, y;
+  float angle; 
+  float diameter = 10;
+  float radius = diameter/2;
+
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  float easing = 0.2;
+
+  boolean over = false;
+  float alpha = 255; 
+  boolean rotating = true;
+  boolean explode = false;
+
+  boolean goal = false;
+
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin; 
+  }
+
+  void update() {
+    breathAngle += breathRate;
+
+    if (goal) {
+      float targetX = width-portalSpacer;
+      float targetY = height-portalSpacer;
+      float targetAngle = 0;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+      float da = targetAngle - angle;
+      if (abs(da) > 0.01) {
+        angle += da * easing;
+      } 
+
+
+    } 
+    else if (explode) {
+
+      alpha -= 5;
+      if (alpha < 5) {
+        x = portalSpacer;
+        y = beginY;
+        explode = false;
+        alpha = 255;
+      } 
+
+    } 
+    else if (started) {
+
+      if(mousePressed) {
+        angle = HALF_PI + QUARTER_PI;
+      } 
+      else {
+        angle = QUARTER_PI;
+      }
+
+      x += cos(angle);
+      y += sin(angle);
+
+      // Check for goal!
+      if (dist(x, y, endX, endY) < radius) {
+        goal = true; 
+        breathRate = 1.5;
+      }
+
+      boolean overlap = false;
+      for (int i = 0; i < ps.length; i++) {
+        ps[i].over = false;
+        float py = ps[i].y;
+        float psize = ps[i].s;
+
+        // CHECK IF OVER A LEFT-EDGE TRIANGLE
+        float testX = x - radius;
+        float testY = y + radius;
+        if (testX < psize && testY > py && testY < py+psize+psize) {
+          if (ps[i].direction == LEFTY) {
+
+            if ((testY < py+psize && testY-py > testX) || (testY > py+psize && (testY-py-psize + testX < psize) || int(py+psize) == testY)) { 
+              overlap = true; 
+              ps[i].over = true;
+            }
+
+          } 
+
+        }
+        testX = x - radius;
+        testY = y - radius;
+        if (testX < psize && testY > py && testY < py+psize+psize) {
+          if (ps[i].direction == LEFTY) {
+
+            if ((testY < py+psize && testY-py > testX) || (testY > py+psize && (testY-py-psize + testX < psize) || int(py+psize) == testY)) { 
+              overlap = true; 
+              ps[i].over = true;
+            }
+
+          } 
+
+        }
+        // CHECK IF OVER A RIGHT-EDGE TRIANGLE
+        testX = x + radius;
+        testY = y + radius;       
+        if (testX > width-psize && testX < width && testY > py && testY < py+psize+psize) {
+          if (ps[i].direction != LEFTY) {
+            // CHECK IF OVER A RIGHT-EDGE TRIANGLE
+            if ((testY < py+psize && testY-py + (testX-(width-psize)) > psize) || (testY > py+psize && (testY-py-psize < testX-(width-psize)) || int(py+psize) == testY)) {
+              overlap = true; 
+              ps[i].over = true;
+            }
+
+          } 
+
+        }
+        testX = x + radius;
+        testY = y - radius;       
+        if (testX > width-psize && testX < width && testY > py && testY < py+psize+psize) {
+          if (ps[i].direction != LEFTY) {
+            // CHECK IF OVER A RIGHT-EDGE TRIANGLE
+            if ((testY < py+psize && testY-py + (testX-(width-psize)) > psize) || (testY > py+psize && (testY-py-psize < testX-(width-psize)) || int(py+psize) == testY)) {
+              overlap = true; 
+              ps[i].over = true;
+            }
+
+          } 
+
+        }
+        
+        // CHECK FOR OUTSIDE BORDERS
+        if (x-radius < 5 || x+radius > width-5 || y+radius > height-5) {
+          overlap = true; 
+        }
+
+      }
+
+      if (overlap) {
+        explode = true;
+        //println(explode);
+      }
+
+    }
+  }
+
+  void display() {
+    pushMatrix();
+
+    if (explode) {
+
+      translate(x, y);
+      float r = map(alpha, 255, 0, HALF_PI, TWO_PI*4);
+      float s = map(alpha, 255, 0, 1.0, 5.0);
+      scale(s);
+      rotate(r);
+      noStroke();
+      fill(255, alpha);
+      ellipse(0, 0, diameter, diameter);
+      fill(0, 102, 153, alpha);
+      ellipse(2, 0, radius, radius);
+
+    } 
+    else {
+
+      translate(x, y);
+      scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+      noStroke();
+      fill(255, alpha);
+      ellipse(0, 0, diameter, diameter);
+      rotate(angle);
+      fill(0, 102, 153, alpha);
+      ellipse(2, 0, radius, radius);
+
+    }
+
+    popMatrix();
+  }
+
+}
+
+class Pyramid {
+  float y, basey;
+  float s;
+  float angle;
+  int direction;
+
+  Pyramid (float scalein, float yin, int LR, float anglein) {
+    y = yin;
+    basey = y;
+    s = scalein;
+    direction = LR;
+    angle = anglein;
+  }
+  
+  void update() {
+    angle += 0.02;
+    float offset = sin(angle) * 10; 
+    y = basey + offset;
+  }
+
+  void display() {
+    float n = s/5;
+    noStroke();
+    fill(highlightColor);
+
+    if (direction == LEFTY) {
+      triangle(0, y, s, y+s, 0, y+s+s);
+    } else {
+      triangle(width, y, width-s, y+s, width, y+s+s);
+    }
+    
+  }
+
+}
+
+
+  </SCRIPT> 
+<canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>

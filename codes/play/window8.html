@@ -1,0 +1,202 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// BATTLE FRONT by REAS (www.reas.com)
+// Ported from Processing to Processing.js  
+  
+var windowWidth = opener.winVars[8][2];
+var windowHeight = opener.winVars[8][3];
+  
+boolean hasOpenedNextWindow=false;
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int beginY;
+int endX;
+int endY;
+
+float angle = 0.2;
+
+boolean itsNotOver = true;
+
+Eye e;
+
+color highlightColor = #1A9966;
+color accentColorA = #99CC33;
+color accentColorB = #006699;
+
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+
+  beginY = height/2;
+  endY = beginY;
+  endX = width - portalSpacer;
+  
+  e = new Eye(beginX, beginY);
+}
+
+void draw() 
+{
+  background(0);
+  
+  noFill();
+  stroke(highlightColor);
+  pushMatrix();
+  translate(width/2, height/2);
+  rotate(angle);
+  for (int i = -width; i < width*2; i += 10) {
+    line(i, -height, i, height); 
+  }
+  popMatrix();
+  
+  stroke(accentColorA);
+  pushMatrix();
+  translate(width/2, height/2);
+  rotate(angle * 1.5);
+  for (int i = -width; i < width*2; i += 5) {
+    line(i, -height, i, height); 
+  }
+  popMatrix();
+  
+  stroke(accentColorB);
+  pushMatrix();
+  translate(width/2, height/2);
+  rotate(-angle / 2.0);
+  for (int i = -width; i < width*2; i += 10) {
+    line(i, -height, i, height); 
+  }
+  popMatrix();
+  
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(beginX, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(endX, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, endY, 8, endY);
+  line(width, endY, width-8, endY);
+  
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }
+}
+
+void mousePressed() {
+   e.x += 2.0;
+   angle += 0.1;
+}
+
+void mouseReleased() 
+{
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true;	
+    //}
+  }
+  
+}
+
+void openNextWindow()
+{
+  opener.popUp(9);
+} 
+
+
+class Eye {
+
+  float x, y;
+  float speed = 0.5;
+  float angle;
+  float diameter = 10;
+  float radius = diameter / 2;
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  float easing = 0.1;
+
+  boolean goal = false;
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin; 
+  }
+
+  void update() {
+
+    breathAngle += breathRate;
+
+    if (goal) {
+
+      float targetX = endX;
+      //float targetY = endY;
+      //float targetAngle = 0;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      }  
+      
+    } 
+    else {
+      
+      float targetX = beginX;
+      float dx = targetX - x;
+      if (abs(dx) > 0.001) {
+        x += dx * 0.005;
+      }
+
+      if (dist(x, y, endX, endY) < radius) {
+        goal = true;
+        breathRate = 1.5; 
+        //breathScale = 2.0;
+      }
+    }
+
+  }
+
+  void display() {
+    pushMatrix();
+    translate(x, y);
+    scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+    noStroke();
+    fill(255);
+    ellipse(0, 0, diameter, diameter);
+
+    rotate(angle - HALF_PI);
+    if (!goal) {
+      fill(0, 102, 153);
+      ellipse(0, 2, radius, radius);
+    } 
+    else {
+      fill(0, 102, 153);
+      ellipse(0, 0, radius, radius);
+    }
+    popMatrix();
+  }
+
+}
+
+
+  </SCRIPT> 
+  <canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas> 
+</BODY></HTML>

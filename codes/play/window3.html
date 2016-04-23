@@ -1,0 +1,293 @@
+
+<!DOCTYPE html> 
+<!-- saved from url=(0064)http://ejohn.org/apps/processing.js/examples/topics/pattern.html --> 
+<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+  <SCRIPT src="processing.js"></SCRIPT> 
+  <SCRIPT src="init.js"></SCRIPT> 
+  <style>body { margin: 0px; overflow:hidden }</style> 
+  <!--<script src="windowScripts.js" language="javascript"></script>-->
+</HEAD><BODY marginheight="0" marginwidth="0"> 
+  <SCRIPT type="application/processing"> 
+  
+// SLENDER VINES by REAS (www.reas.com)
+// Ported from Processing to Processing.js
+   
+var windowWidth = opener.winVars[3][2];
+var windowHeight = opener.winVars[3][3];
+  
+boolean hasOpenedNextWindow=false;
+
+int portalSpacer = 16;
+int portalSize = 14;
+int beginX = portalSpacer;
+int endX;
+int beginY;
+int endY;
+
+boolean itsNotOver = true;
+
+Eye e;
+
+Vine[] vines;
+int numVines = 10;
+
+color highlightColor = #FF6600;
+  
+  
+void setup() 
+{
+  size(windowWidth, windowHeight);
+  smooth();
+  frameRate(30);
+  
+  //randomSeed(0);
+  
+  float[] offsets = { 0.5, 1.0, 0.7, 1.6, 1.1, 
+                      0.9, 1.1, 1.6, 0.7, 0.9 };
+                      
+  int[] heights = { 10, 12, 11, 10, 10,
+                    10, 6, 12, 10, 10 };
+                    
+  vines = new Vine[numVines];
+  for (int i = 0; i < numVines; i++) {
+    if (i < numVines/2) {
+      vines[i] = new Vine(15 + i * 15, heights[i], offsets[i], i); 
+    } else {
+      vines[i] = new Vine(22 + (i-numVines/2) * 15, heights[i], -offsets[i], i); 
+    }
+  }
+  
+  beginY = height/2;
+  endY = height/2;
+  endX = width - portalSpacer;
+  
+  e = new Eye(beginX, beginY);
+}
+
+void draw() 
+{
+  background(0);
+  
+  for (int i = 0; i < numVines; i++) {
+    vines[i].update();
+    vines[i].display();    
+  }
+  
+  // Portal properties
+  noFill();
+  stroke(255);
+  strokeWeight(2);
+  // Starting portal
+  ellipse(beginX, beginY, portalSize, portalSize);
+  // EndPortal
+  ellipse(endX, endY, portalSize, portalSize);
+  strokeWeight(1);
+  line(0, beginY, 8, beginY);
+  line(width, endY, width-8, endY);
+  
+  if (itsNotOver) {
+    e.update();
+    e.display();
+  }
+}
+
+void mouseReleased() 
+{
+  e.release(); 
+  if (e.goal == true) {
+    itsNotOver = false; 
+    // OPEN THE NEXT WINDOW, STOP DRAWING THE EYE
+    //if(!hasOpenedNextWindow)
+    //{
+      openNextWindow();
+    //  hasOpenedNextWindow=true; 
+    //}
+  } 
+  
+}
+
+void openNextWindow()
+{
+  opener.popUp(4);
+} 
+
+
+
+class Eye {
+
+  float x, y;
+  float diameter = 10;
+  float radius = diameter/2;
+  float breathAngle = 0.0;
+  float breathRate = 0.2;
+  float breathScale = 8.0;
+  
+  float easing = 0.1;
+  
+  boolean over = false;
+  int myFriend = 20;
+  boolean alreadyFoundAFriend = false;
+
+  boolean attack = false;  
+  boolean goal = false;
+
+  Eye(float xin, float yin) {
+    x = xin;
+    y = yin; 
+  }
+
+  void release() {
+    alreadyFoundAFriend = false; 
+  }
+
+  void update() {
+    breathAngle += breathRate;
+
+    if (goal == false) {
+      attack = false;
+
+      for (int i = 0; i < numVines; i++) {
+        if (i != myFriend && alreadyFoundAFriend == false) {
+          float d = dist(x, y, vines[i].newx, vines[i].newy);
+          if(d < radius) {
+            if (mousePressed) {
+              myFriend = i; 
+              alreadyFoundAFriend = true;
+            }
+            attack = true;
+          }  
+        }
+      }
+
+      if (dist(x, y, endX, endY) < radius) {
+        //overGoal = true;
+        goal = true;
+        breathRate = 1.5;
+      } 
+
+      if (myFriend < numVines) {
+        x = vines[myFriend].newx;
+        y = vines[myFriend].newy;
+      }
+
+    } 
+    else {
+      float targetX = width-portalSpacer;
+      float targetY = height/2;
+      //float targetAngle = 0;
+      float dx = targetX - x;
+      if (abs(dx) > 0.1) {
+        x += dx * easing;
+      } 
+      float dy = targetY - y;
+      if (abs(dy) > 0.1) {
+        y += dy * easing;
+      } 
+    }
+  }
+
+  void display() {
+
+    pushMatrix();
+    translate(x, y);
+
+    scale(1.0 + (cos(breathAngle) + 1.0) / breathScale);
+
+    noStroke();
+    fill(255);
+    ellipse(0, 0, diameter, diameter);
+
+    if (attack) {
+      fill(255, 153, 0);
+    } 
+    else {
+      fill(0, 102, 153);
+    }
+    ellipse(0, 0, radius, radius);
+    popMatrix();
+
+  }
+
+}
+
+
+
+class Vine {
+  float x;
+  float newx, newy;
+  int units;
+  float angle;
+  float inc = 0.0;
+  float offset;
+  int myNumber;
+
+  Vine (int xin, int uin, float ain, int mni) {
+    x = xin;
+    units = uin;
+    offset = ain;
+    myNumber = mni;
+  } 
+
+  void update() {
+    inc += 0.01;
+    float masterAngle = sin(inc) / 10.0 + sin(inc*1.2) / 20.0;
+    angle = masterAngle * offset;
+  }
+
+  void display() {
+    if (myNumber < numVines/2) {
+      newx = x;
+      float newangle = angle - HALF_PI;
+      newy = height+15;
+      float px = x;
+      float py = height;
+      noFill();
+      stroke(highlightColor);
+      beginShape();
+      vertex(x, height);
+      for (int i = units; i > 0; i--) {
+        newx -= cos(newangle) * -8;
+        newy -= sin(newangle) * -8;
+        //line(newx, newy, px, py);
+        //px = newx;
+        //py = newy;
+        vertex(newx, newy);
+        newangle += angle;
+      }
+      endShape();
+      noStroke();
+      fill(204, 153, 0);
+      ellipse(newx, newy, 4, 4);
+
+    } 
+    else {
+      newx = x;
+      float newangle = angle - HALF_PI;
+      newy = -15;
+      float px = x;
+      float py = 0;
+      noFill();
+      stroke(204, 102, 0);
+      beginShape();
+      vertex(x, 0);
+      for (int i = units; i > 0; i--) {
+        newx -= cos(newangle) * -8;
+        newy += sin(newangle) * -8;
+        //line(newx, newy, px, py);
+        //px = newx;
+        //py = newy;
+        vertex(newx, newy);
+        newangle += angle;
+      }
+      endShape();
+      noStroke();
+      fill(204, 153, 0);
+      ellipse(newx, newy, 4, 4);
+    }
+
+  }
+}
+
+  </SCRIPT> 
+<canvas style="overflow:hidden;width:windowWidth;height:windowHeight;padding-left:0px;padding-top:0px;"></canvas>
+</BODY></HTML>
