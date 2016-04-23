@@ -1,0 +1,1 @@
+Given a screen recording file is too big to be uploaded on GitHub, find from [here the demo uploaded to YouTube by the Google Chrome](https://www.youtube.com/watch?v=ek8Gy_lK08k). The video showcases Twitch as a one of Chrome Experiment projects.
