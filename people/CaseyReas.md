@@ -1,6 +1,6 @@
 [Casey Reas](http://reas.com/information) is a software artist who “writes software to explore conditional systems of art.” Trained at the Massachusetts Institute of Technology in Media Arts and Sciences, Reas utilizes the generative software to produce dynamic graphics. 
 
-While being a graduate student at the MIT, Reas and his colleague Ben Fry invented a programming language called [Processing](https://processing.org/). In a 2008 [interview](http://adage.com/article/feature/digital-talent-ben-fry-casey-reas/125765/), Reas states the motivation behind their intention as follows:
+While being a graduate student at the MIT, Reas and his colleague Ben Fry invented a programming language called [Processing](https://processing.org/). In a 2008 [interview](http://adage.com/article/feature/digital-talent-ben-fry-casey-reas/125765/), Reas states the motivation behind their invention as follows:
 
 >It’s not very common for artists and designers to be the primary authors of programming environment, but this is changing. I hope Processing has helped to demonstrate that we don’t need to rely only on what software companies market to us and what engineers think we need. As a creative community, we can create our own tools for our specific needs and desires.
 
