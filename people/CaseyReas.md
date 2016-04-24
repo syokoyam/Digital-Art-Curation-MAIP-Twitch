@@ -2,7 +2,7 @@
 
 While being a graduate student at the MIT, Reas and his colleague Ben Fry invented a programming language called [Processing](https://processing.org/). In a 2008 [interview](http://adage.com/article/feature/digital-talent-ben-fry-casey-reas/125765/), Reas states the motivation behind their intention as follows:
 
->It’s not very common for artists and designers to be the primary authors of programming environment, but this is changing. I hope Processing has helped to demonstrate that we don’t need to rely only on what software companies market to us and what engineers think we need. As a creative community, we can create our own tools for our specific needs and desires.>
+>It’s not very common for artists and designers to be the primary authors of programming environment, but this is changing. I hope Processing has helped to demonstrate that we don’t need to rely only on what software companies market to us and what engineers think we need. As a creative community, we can create our own tools for our specific needs and desires.
 
 Encouraged by such an Open Souce policy, the developing community has developed 70+ libraries of Processing within seven years after the release. Processing users’ fields include: 12K and higher education, music industry, journal publishing, design and art industries. As a result, the language initially developed to teach computational graphic design literacy can now process audio, electronics, and animation. 
 
